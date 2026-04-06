@@ -12,7 +12,7 @@ PROPERTIES_FILE = Path(__file__).parent / "test.properties"
 
 def load_properties() -> configparser.ConfigParser:
     """Read test.properties fresh on every call so changes apply without restart."""
-    cfg = configparser.ConfigParser()
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
     content = "[default]\n" + PROPERTIES_FILE.read_text()
     cfg.read_string(content)
     return cfg
@@ -82,6 +82,7 @@ def upload(user_id: int):
                 "message": f'"{file.filename}" uploaded successfully.',
             }
 
+        time.sleep(2)
         return redirect(url_for("result", user_id=user_id))
 
     return render_template("upload.html", user=session["user"], user_id=user_id)
@@ -100,4 +101,4 @@ def result(user_id: int):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8080)
