@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Result — User {{ user_id }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); width: 100%; max-width: 420px; text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.4rem; margin-bottom: .5rem; }
+    .message { font-size: .95rem; color: #374151; margin-bottom: 1.5rem; }
+    .badge { display: inline-block; padding: .25rem .75rem; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-bottom: 1.5rem; }
+    .badge.success { background: #dcfce7; color: #166534; }
+    .badge.error   { background: #fee2e2; color: #991b1b; }
+    .actions { display: flex; gap: .75rem; justify-content: center; }
+    a.btn { padding: .6rem 1.25rem; border-radius: 4px; font-size: .9rem; text-decoration: none; }
+    a.btn-primary { background: #2563eb; color: white; }
+    a.btn-primary:hover { background: #1d4ed8; }
+    a.btn-secondary { background: #f1f5f9; color: #374151; }
+    a.btn-secondary:hover { background: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    {% if outcome.success %}
+      <div class="icon">&#10003;</div>
+      <h1>Upload Successful</h1>
+      <span class="badge success">SUCCESS</span>
+    {% else %}
+      <div class="icon">&#10007;</div>
+      <h1>Upload Failed</h1>
+      <span class="badge error">FAILED</span>
+    {% endif %}
+
+    <p class="message">{{ outcome.message }}</p>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="/users/{{ user_id }}/upload">Upload another</a>
+      <a class="btn btn-secondary" href="/logout">Logout</a>
+    </div>
+  </div>
+</body>
+</html>
