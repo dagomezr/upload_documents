@@ -136,6 +136,7 @@ if __name__ == "__main__":
     # Reset to clean state
     write_properties(login_delay=0, upload_error_ids="")
     set_env_credentials("admin", "password123")
+    restore_files()
 
     print(f"\n{'=' * 60}")
     print("  All scenarios completed. Config reset to defaults.")
