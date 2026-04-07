@@ -1,17 +1,9 @@
 import json
-import configparser
 from pathlib import Path
 from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
 import config
 
 PROCESSED_DIR = Path(config.FILES_DIR) / "processed"
-PROPERTIES_FILE = Path("test_server/test.properties")
-
-
-def load_properties() -> configparser.ConfigParser:
-    cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    cfg.read_string("[default]\n" + PROPERTIES_FILE.read_text())
-    return cfg
 
 
 def login(page: Page) -> None:

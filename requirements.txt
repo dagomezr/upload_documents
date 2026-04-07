@@ -1,3 +1,6 @@
+# Core dependencies
 playwright>=1.44.0
 python-dotenv>=1.0.0
+
+# Only required for running the local test server
 flask>=3.0.0
