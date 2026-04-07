@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 *.png
 .venv/
+
+# Test server and test files (dev only)
+test_server/
+test_scenarios.py
+files/
