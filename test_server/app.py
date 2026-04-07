@@ -67,14 +67,15 @@ def upload(user_id: int):
     if request.method == "POST":
         file = request.files.get("file")
         cfg = load_properties()
-        should_succeed = cfg.getboolean("default", "upload_success", fallback=True)
+        error_ids = [i.strip() for i in cfg.get("default", "upload_error_ids", fallback="").split(",") if i.strip()]
+        should_fail = str(user_id) in error_ids
 
         if not file or file.filename == "":
             session["upload_result"] = {"success": False, "message": "No file selected."}
-        elif not should_succeed:
+        elif should_fail:
             session["upload_result"] = {
                 "success": False,
-                "message": f'Upload of "{file.filename}" failed (simulated failure).',
+                "message": f'Upload of "{file.filename}" failed (simulated failure for user {user_id}).',
             }
         else:
             session["upload_result"] = {

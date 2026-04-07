@@ -17,31 +17,42 @@ def load_properties() -> configparser.ConfigParser:
 def login(page: Page) -> None:
     print(f"Logging in as {config.USERNAME}...")
     page.goto(config.LOGIN_URL)
-    page.locator("#username").fill(config.USERNAME)
-    page.locator("#password").fill(config.PASSWORD)
-    page.get_by_role("button", name="Login").click()
-    page.wait_for_url("**/home", timeout=10_000)
+    page.locator(config.SEL_USERNAME).fill(config.USERNAME)
+    page.locator(config.SEL_PASSWORD).fill(config.PASSWORD)
+    page.get_by_role("button", name=config.SEL_LOGIN_BUTTON).click()
+
+    try:
+        page.wait_for_url(config.HOME_URL, timeout=config.TIMEOUT)
+    except PlaywrightTimeoutError:
+        error_el = page.locator(".error")
+        if error_el.count() > 0:
+            raise RuntimeError(f"Login failed: {error_el.inner_text()}")
+        raise RuntimeError(
+            f"Login timed out — could not reach '{config.HOME_URL}' after submitting credentials."
+        )
+
     print("Login successful.")
 
 
 def upload_file_for_user(page: Page, user_id: str, file_path: Path) -> None:
-    upload_url = f"{config.BASE_URL}/users/{user_id}/upload"
+    upload_url = config.EMPLOYEE_UPLOAD_URL.replace("{id}", user_id)
+    result_url = config.EMPLOYEE_RESULT_URL.replace("{id}", user_id)
 
     print(f"  Navigating to {upload_url}")
     page.goto(upload_url)
-    page.wait_for_selector("#file-input", timeout=10_000)
+    page.wait_for_selector(config.SEL_FILE_INPUT, timeout=config.TIMEOUT)
 
-    page.locator("#file-input").set_input_files(str(file_path))
-    page.get_by_role("button", name="Upload").click()
+    page.locator(config.SEL_FILE_INPUT).set_input_files(str(file_path))
+    page.get_by_role("button", name=config.SEL_UPLOAD_BUTTON).click()
 
-    page.wait_for_url(f"**/users/{user_id}/result", timeout=10_000)
+    page.wait_for_url(f"**{result_url.split(config.BASE_URL)[-1]}", timeout=config.TIMEOUT)
 
-    badge = page.locator(".badge")
-    badge.wait_for(timeout=5_000)
+    badge = page.locator(config.SEL_RESULT_BADGE)
+    badge.wait_for(timeout=config.TIMEOUT)
     status = badge.get_attribute("class") or ""
-    message = page.locator(".message").inner_text()
+    message = page.locator(config.SEL_RESULT_MESSAGE).inner_text()
 
-    if "success" not in status:
+    if config.SEL_SUCCESS_CLASS not in status:
         raise RuntimeError(message)
 
 
@@ -57,14 +68,13 @@ def collect_files(folder: Path) -> list[tuple[str, Path]]:
             if len(parts) == 2 and parts[0].isdigit():
                 results.append((parts[0], f))
             else:
-                print(f"Skipping '{f.name}' — does not match {{user_id}}_contract.pdf convention.")
+                print(f"Skipping '{f.name}' — does not match {{user_id}}_{{name}} convention.")
     return results
 
 
 def move_to_processed(file_path: Path) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     dest = PROCESSED_DIR / file_path.name
-    # Avoid overwrite — append a counter if name already exists
     counter = 1
     while dest.exists():
         dest = PROCESSED_DIR / f"{file_path.stem}_{counter}{file_path.suffix}"
@@ -72,7 +82,7 @@ def move_to_processed(file_path: Path) -> None:
     file_path.rename(dest)
 
 
-def run() -> None:
+def run(batch_size: int) -> None:
     files_dir = Path(config.FILES_DIR)
     if not files_dir.exists():
         raise FileNotFoundError(f"Files directory not found: {files_dir}")
@@ -82,8 +92,6 @@ def run() -> None:
         print("No files found to upload.")
         return
 
-    cfg = load_properties()
-    batch_size = cfg.getint("default", "batch_size", fallback=0)
     if batch_size > 0:
         files = files[:batch_size]
         print(f"Batch size limit: {batch_size}")
@@ -99,24 +107,30 @@ def run() -> None:
 
         try:
             login(page)
-            print()
+        except Exception as e:
+            error_msg = str(e).splitlines()[0] if isinstance(e, RuntimeError) else f"{type(e).__name__}: {str(e).splitlines()[0]}"
+            print(f"\nERROR: {error_msg}")
+            context.close()
+            browser.close()
+            print(json.dumps({"succeeded": [], "failed": [], "error": error_msg}, indent=2))
+            return
 
+        print()
+
+        try:
             for i, (user_id, file_path) in enumerate(files, 1):
                 print(f"[{i}/{len(files)}] {file_path.name} → user {user_id}")
                 try:
                     upload_file_for_user(page, user_id, file_path)
                     print(f"  OK")
                     summary["succeeded"].append(user_id)
-                except (PlaywrightTimeoutError, RuntimeError) as e:
-                    print(f"  ERROR: {e}")
-                    page.screenshot(path=f"error_{file_path.stem}.png")
-                    print(f"  Screenshot saved to error_{file_path.stem}.png")
+                except Exception as e:
+                    print(f"  ERROR: {type(e).__name__}: {e}")
                     summary["failed"].append(user_id)
                 finally:
                     move_to_processed(file_path)
                     print(f"  Moved to processed/")
                 print()
-
         finally:
             context.close()
             browser.close()
